@@ -13,7 +13,7 @@ function getHex(number) {
 }
 
 function getNumber(line) {
-    return parseInt(line.replace(/.*] (.\d+) ".*/, '$1,'));
+    return parseInt(line.replace(/.*] (\d+) ".*/, '$1,'));
 }
 
 module.exports = {
@@ -23,7 +23,8 @@ module.exports = {
     tr: through(function (buf) {
         var num = getNumber(buf.toString());
         var hex = '';
-        if (num) hex = getHex(num) + '\n';
+        if (num) hex = getHex(num) + ' ' + num + '\n';
+        console.log(num)
         this.queue(hex);
     })
 

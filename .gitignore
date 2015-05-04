@@ -1,8 +1,9 @@
 .idea
 
 # Logs
-#master/logs/*
-#agent/logs/*
+master/logs/*
+agent/logs/*
+master/all.log
 
 # Runtime data
 pids
@@ -29,4 +30,5 @@ build/Release
 node_modules
 master/node_modules
 master/clean.js
+master/concat.js
 agent/node_modules

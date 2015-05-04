@@ -23,7 +23,7 @@ module.exports = {
     tr: through(function (buf) {
         var num = getNumber(buf.toString());
         var hex = '';
-        if (num) hex = getHex(num) + '\n';
+        if (num) hex = getHex(num) + ' ' + num + '\n';
         this.queue(hex);
     })
 

@@ -1,5 +1,6 @@
 {
   "path": "/tmp/logs/",
   "host": "localhost",
-  "port": 8000
+  "port": 8000,
+  "port2": 8001
 }
