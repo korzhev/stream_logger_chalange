@@ -2,9 +2,11 @@
   "name": "application-name",
   "version": "0.0.1",
   "dependencies": {
+    "lodash": "^3.8.0",
     "scp2": "^0.2.1",
     "split": "^0.3.3",
     "through": "^2.3.7",
-    "uuid": "^2.0.1"
+    "uuid": "^2.0.1",
+    "winston": "^1.0.0"
   }
 }

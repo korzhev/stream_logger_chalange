@@ -6,116 +6,99 @@ var config = require('./config');
 var common = require('./common');
 var fs = require('fs');
 var uuid = require('uuid');
-var scpClient = require('scp2');
 var cluster = require('cluster');
-
+var winston = require('winston');
+var logger = new (winston.Logger)({
+    transports: [
+        new (winston.transports.Console)({
+            colorize: true
+        })
+    ]
+});
 
 
 if (cluster.isWorker) {
-
+    //сразу соединяемся с раздающим сервером
     var client = net.connect({port: config.port, host: config.host},
         function () { //'connect' listener
-            console.log('connected to server!');
-            //client.write('world!\r\n');
-
-
+            logger.info('child connected to server!');
+            // запись в файл аналогична
             var writeStream = fs.createWriteStream('logs/' + uuid.v4() + '-part.log', { flags : 'w' });
-
-            //fs.createReadStream('access.log')
             client
                 .pipe(common.split())
                 .pipe(common.tr)
                 .pipe(writeStream);
 
             writeStream.on('finish', function(){
-                process.send('ready1');
-                client.end();
+                process.send('ready'); // шлём мастеру, что закончили
+                client.end(); // отключаемся
             });
         });
-    //        client.ref();
 
 } else {
-    var readyCount=0;
-    var processNumber =1;
+    var scpClient = require('scp2');
+    var readyCount = 0; // количество закончивших работу процессов
+    var processNumber = 1;
+    var _ = require('lodash');
+
     function connectTo(){
         var client = net.connect({port: config.port2, host: config.host},
             function () { //'connect' listener
-                clearInterval(timer);
-                console.log('connected to server!');
-
-
+                clearInterval(timer); // перестаём попытки подсоединиться
+                logger.info('connected to server!');
+                // управляющий сервер прислал количество дочерних процессов
                 client.on('data', function(data){
                     var command=data.toString();
-                    console.log(command)
-                    if (command && command.indexOf('create ')>=0) {
+                    if (command && command.indexOf('create ')>=0) { // проверяем даныые, если это нужная команда
                         processNumber = command.split(' ')[1];
+                        //processNumber = require('os').cpus().length; // либо по количеству процессоров
                         cluster.setupMaster({silent: true});
                         for ( var i = 0; i < processNumber; i++) {
                             cluster.fork();
                         }
                     }
-                    //client.end();
                 });
 
                 cluster.on('online', function(worker) {
 
-                    worker.on('message', function(){
-
+                    worker.once('message', function(){ // получаем сообщение только в конце
                         if (++readyCount == processNumber) {
-                            var scpc = scpClient.scp('logs/*.log',{
-                                host: 'example.com',
-                                username: 'admin',
-                                password: 'password',
-                                //privateKey: '....',
-                                path: '/data/stream_logger/master/logs/'
-                            }, function(e){ console.error(e)});
-                            scpc.on('end', function(){ client.end(processNumber); });
-
+                            //var scpc = scpClient.scp('logs/*.log',{ // копируем файлы
+                            //    host: config.scpHost,
+                            //    username: config.user,
+                            //    password: config.password,
+                            //    //privateKey: config.keyPath,
+                            //    path: config.path
+                            //}, function(e){ logger.error(e)});
+                            // по окончании всех процессов сшлём в мастер сигнал
+                            client.end(processNumber);
+                            logger.info('agent is down');
+                            _.forEach(cluster.workers, function(w, key){
+                                w.kill();
+                            });
+                            //scpc.on('end', function(){ client.end(processNumber); }); // считаем что буфера хватит для числа процессов
                         }
                     });
                 });
 
                 cluster.on('exit', function(worker, code, signal) {
-                    console.log('worker ' + worker.process.pid + ' died');
+                    logger.info('worker ' + worker.process.pid + ' died');
                 });
 
-                //var writeStream = fs.createWriteStream('logs/' + uuid.v4() + '-part.log', { flags : 'w' });
-                //client.pipe(common.split()).pipe(common.tr).pipe(writeStream);
-                //
-                //writeStream.on('finish', function(){
-                //    client.write('ready\n');
-                //});
             });
-        //client.ref();
         client.on('error', function(e) {
-            console.error('waiting')
+            logger.error('waiting')
         });
 
     }
-
-    //cluster.setupMaster({silent: true});
-    //for ( var i = 0; i < 4; i++) {
-    //    cluster.fork();
-    //}
-    //connectTo();
+    logger.info('waiting for master...');
+    // раз в секунду проверяем не работает ли сервер
     var timer = setInterval(     // вызывается раз в 1 секунд
         connectTo
         ,1000
     );
     //timer.unref();
 
-    //var client = net.connect({port: config.port, host: config.host},
-    //    function () { //'connect' listener
-    //        console.log('connected to server!');
-    //        client.write('world!\r\n');
-    //    });
-    //client.on('data', function (data) {
-    //    console.log(data.toString());
-    //    client.end();
-    //});
-    //client.on('end', function () {
-    //    console.log('disconnected from server');
-    //});
 }
 
 

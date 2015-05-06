@@ -1,6 +1,6 @@
 {
   "processNumber": 2,
   "host": "127.0.0.1",
-  "port": 8000,
-  "port2": 8001
+  "port": 3300,
+  "port2": 3301
 }
