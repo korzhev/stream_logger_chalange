@@ -63,20 +63,25 @@ if (cluster.isWorker) {
 
                     worker.once('message', function(){ // получаем сообщение только в конце
                         if (++readyCount == processNumber) {
-                            //var scpc = scpClient.scp('logs/*.log',{ // копируем файлы
-                            //    host: config.scpHost,
-                            //    username: config.user,
-                            //    password: config.password,
-                            //    //privateKey: config.keyPath,
-                            //    path: config.path
-                            //}, function(e){ logger.error(e)});
+                            scpClient.scp('logs/*.log',{ // копируем файлы
+                                host: config.scpHost,
+                                username: config.user,
+                                password: config.password,
+                                //privateKey: config.keyPath,
+                                path: config.path
+                            }, function(e){ logger.error(e)});
                             // по окончании всех процессов сшлём в мастер сигнал
-                            client.end(processNumber);
-                            logger.info('agent is down');
+                            //client.end(processNumber);
+                            //logger.info('agent is down');
+                            //_.forEach(cluster.workers, function(w, key){
+                            //    w.kill();
+                            //});
+                            scpClient.on('end', function(){
                             _.forEach(cluster.workers, function(w, key){
                                 w.kill();
                             });
-                            //scpc.on('end', function(){ client.end(processNumber); }); // считаем что буфера хватит для числа процессов
+                              client.end(processNumber);
+                             }); // считаем что буфера хватит для числа процессов
                         }
                     });
                 });
