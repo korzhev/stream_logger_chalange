@@ -6,8 +6,7 @@ var config = require('./config');
 var common = require('./common');
 var fs = require('fs');
 var uuid = require('uuid');
-var _ = require('lodash');
-var EE = require('events').EventEmitter;
+var scpClient = require('scp2');
 var cluster = require('cluster');
 
 
@@ -30,6 +29,7 @@ if (cluster.isWorker) {
 
             writeStream.on('finish', function(){
                 process.send('ready1');
+                client.end();
             });
         });
     //        client.ref();
@@ -60,7 +60,18 @@ if (cluster.isWorker) {
                 cluster.on('online', function(worker) {
 
                     worker.on('message', function(){
-                        if (++readyCount == processNumber) client.write(processNumber);
+
+                        if (++readyCount == processNumber) {
+                            var scpc = scpClient.scp('logs/*.log',{
+                                host: 'example.com',
+                                username: 'admin',
+                                password: 'password',
+                                //privateKey: '....',
+                                path: '/data/stream_logger/master/logs/'
+                            }, function(e){ console.error(e)});
+                            scpc.on('end', function(){ client.end(processNumber); });
+
+                        }
                     });
                 });
 
