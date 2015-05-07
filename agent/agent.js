@@ -19,6 +19,7 @@ var logger = new (winston.Logger)({
 
 if (cluster.isWorker) {
     //сразу соединяемся с раздающим сервером
+    // но при долгом подлючении, возможно опаздать к раздаче потока, и процесс продолжит жить
     var client = net.connect({port: config.port, host: config.host},
         function () { //'connect' listener
             logger.info('child connected to server!');
@@ -69,19 +70,16 @@ if (cluster.isWorker) {
                                 password: config.password,
                                 //privateKey: config.keyPath,
                                 path: config.path
-                            }, function(e){ logger.error(e)});
-                            // по окончании всех процессов сшлём в мастер сигнал
-                            //client.end(processNumber);
-                            //logger.info('agent is down');
-                            //_.forEach(cluster.workers, function(w, key){
-                            //    w.kill();
-                            //});
-                            scpClient.on('end', function(){
-                            _.forEach(cluster.workers, function(w, key){
-                                w.kill();
+                            }, function(e){
+                                if (e) logger.error(e);
+                                else {
+                                    _.forEach(cluster.workers, function(w, key){
+                                        w.kill();
+                                    });
+                                    client.end(processNumber);
+                                    logger.info('agent is going down');
+                                }
                             });
-                              client.end(processNumber);
-                             }); // считаем что буфера хватит для числа процессов
                         }
                     });
                 });
@@ -103,7 +101,4 @@ if (cluster.isWorker) {
         ,1000
     );
     //timer.unref();
-
 }
-
-

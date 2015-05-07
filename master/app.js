@@ -61,6 +61,11 @@ if (cluster.isWorker) {
     function runPilot(){
         pilot = net.createServer(function (socket) { //'connection' listener
             logger.info('agent connected');
+            // при долгом подключении дочернии процессы мастера могут успеть всё обработать,
+            // тогда агентам ничего не останеться и они продолжат висеть
+            // т.к. не сделано никакой команды на отключение в таком случае
+            // и мастер процесс тоже останется висеть не склеив файлы
+            // этов всё можно решить
             socket.write('create ' + config.processNumber);
 
             socket.once('end', function () {
@@ -118,7 +123,6 @@ if (cluster.isWorker) {
     function catchAllParts(data) {
         if (_.isFinite(data)) parts +=data; // от агента придёт инфа о том сколько его детей закончило, по завершению всех
         else parts++;
-        console.log(parts);
         if (parts == _.keys(streams).length) concatParts();
     }
     // убиваем детей и соединяем файлы
@@ -165,6 +169,10 @@ if (cluster.isWorker) {
                     // можно впринципе аккумулироать несколько строк перед отправкой,
                     // изменения только здесь надо будет внести,
                     // но одна строка == целое уоличество строк :)
+                    // вообще хотелось бы эту часть проверить, по необходимости изменить
+                    // , т.к. нет уверености в поведении на больших файлах >500мб, не проверил.
+                    // не будет ли читать быстрее чем писать и съедать память(а оно так и будет).
+                    // есть методы pause() resume() но они не так работают, как я ожидаю(не сразу преостанавливают чтение).
                     streams[_.keys(streams)[streamsNum]].push(line + '\n');
                     streamsNum++;
                     streamsNum = streamsNum == _.keys(streams).length ? 0 : streamsNum;
